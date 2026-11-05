@@ -50,6 +50,10 @@ import type { CSSVars, Message } from "@/lib/types";
 import { isDemo } from "@/lib/demo";
 import { useSettings } from "@/providers/SettingsProvider";
 
+/** Most inbox messages the background auto-sync will pull from Gmail. Keeps a
+ *  large mailbox from filling the database; raise it when more mail is needed. */
+const MAX_INBOX_SYNC = 150;
+
 /** Order-insensitive equality for two label-id sets — used by the live poll to
  *  tell whether a row's flags actually moved before triggering a re-render. */
 function sameLabelSet(a: string[], b: string[]): boolean {
@@ -215,8 +219,10 @@ export function VibeMailApp() {
   // The authoritative live inbox size from reconcileInbox (messages.list yield),
   // available after the reconcile pass runs. Preferred over inboxTotal once set.
   const [inboxLiveCount, setInboxLiveCount] = useState<number | null>(null);
-  // The sync target: live count when known, else the cached /labels total.
-  const inboxTarget = inboxLiveCount ?? inboxTotal;
+  // The sync target: live count when known, else the cached /labels total,
+  // capped at MAX_INBOX_SYNC.
+  const inboxSize = inboxLiveCount ?? inboxTotal;
+  const inboxTarget = inboxSize === null ? null : Math.min(inboxSize, MAX_INBOX_SYNC);
 
   const [composeOpen, setComposeOpen] = useState(false);
   const [replyTo, setReplyTo] = useState<Message | null>(null);
